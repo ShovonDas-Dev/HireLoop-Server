@@ -56,11 +56,59 @@ app.post("/jobs", async (req, res) => {
   }
 })
 
-app.get('/jobs', async (req,res) => {
-  const collection= db.collection("jobsCollection")
-  const data = await collection.find().toArray();
-  res.send(data)
-})
+
+app.get('/jobs', async (req, res) => {
+  try {
+    const query = {};
+
+    console.log("query:", req.query);
+
+    if (req.query.jobType) {
+      query.jobType = req.query.jobType;
+    }
+
+    if (req.query.category) {
+      query.category = req.query.category;
+    }
+
+    if (req.query.location) {
+      query.location = {
+        $regex: req.query.location,
+        $options: "i"
+      };
+    }
+
+    if (req.query.isRemote !== undefined) {
+      query.isRemote = req.query.isRemote === "true";
+    }
+
+    if (req.query.search) {
+      query.$or = [
+        { jobTitle: { $regex: req.query.search, $options: "i" } },
+        { companyName: { $regex: req.query.search, $options: "i" } },
+        { responsibilities: { $regex: req.query.search, $options: "i" } },
+        { requirements: { $regex: req.query.search, $options: "i" } }
+      ];
+    }
+
+    if (req.query.frequency) {
+      query.frequency = req.query.frequency;
+    }
+
+    const data = await jobsCollection.find(query).toArray();
+
+    res.send(data);
+
+  } catch (error) {
+    res.status(500).send({
+      message: "Failed to fetch jobs",
+      error: error.message
+    });
+  }
+});
+
+
+
 app.delete('/jobs/:id' , async (req,res) => {
     const id = req.params.id;
     const query = { _id: new ObjectId(id) };
